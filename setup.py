@@ -5,8 +5,9 @@ version = '0.0'
 
 setup(name='pacshare',
       version=version,
-      description="Share package repositories on LAN",
+      description="Share pacman repositories on LAN",
       long_description="""\
+      Allows sharing of packages between multiple clients on a LAN with zero configuration.
 """,
       classifiers=[], # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
       keywords='',
