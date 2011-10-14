@@ -20,7 +20,9 @@ setup(name='pacshare',
       install_requires=[
           # -*- Extra requirements: -*-
       ],
-      entry_points="""
-      # -*- Entry points: -*-
-      """,
+      entry_points = {
+          'console_scripts': [
+              'pacshare_xferclient = pacshare.xferclient:main',
+          ],
+        },
       )
