@@ -23,7 +23,7 @@ setup(name='pacshare',
       ],
       entry_points = {
           'console_scripts': [
-              'pacshare_xferclient = pacshare.xferclient:main',
+              'xferclient = pacshare.xferclient:main',
           ],
         },
       )
