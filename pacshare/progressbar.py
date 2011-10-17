@@ -37,8 +37,8 @@ class ProgressBar(object):
     def render_progress(self, amount):
         percent_done = round((amount / self.max) * 100)
 
-        # let the progress bar plus extra chars take up 60% of total terminal width
-        progress_bar_length = round((60 * self.display_width) / 100) - 7 # (-7 for extra chars: [] 000%)
+        # let the progress bar plus extra chars take up 50% of total terminal width
+        progress_bar_length = round((50 * self.display_width) / 100) - 7 # (-7 for extra chars: [] 000%)
 
         # how many chars represent the current percentage done
         num_chars = round((percent_done * progress_bar_length) / 100)
