@@ -14,12 +14,16 @@ def get_progressbar(filename, maxval):
     widgets = ['{:30}'.format(filename), ETA(), '  ',
                FileTransferSpeed(), ' ', Bar(), ' ',
                Percentage()]
-    pbar = ProgressBar(widgets=widgets, maxval=maxval).start()
+    pbar = ProgressBar(widgets=widgets, maxval=maxval)
     return pbar
 
 def retrieve_data(open_url, save_location):
     total_size = int(open_url.getheader('Content-Length') or '0')
     pbar = get_progressbar(os.path.basename(open_url.geturl()), total_size)
+    if total_size:
+        pbar.start()
+    else:
+        logging.info('Downloading file ... (no progess available)')
     block_size = 4096
 
     try:
@@ -28,10 +32,12 @@ def retrieve_data(open_url, save_location):
                 chunk = open_url.read(block_size)
                 if not chunk:
                     break
-                pbar.update(pbar.currval + len(chunk))
+                if pbar.start_time is not None:
+                    pbar.update(pbar.currval + len(chunk))
                 filename.write(chunk)
     finally:
-        pbar.finish()
+        if pbar.start_time is not None:
+            pbar.finish()
 
 def main():
     parser = argparse.ArgumentParser()
