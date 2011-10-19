@@ -3,13 +3,35 @@ import logging
 import os
 import sys
 
-from urllib.request import FancyURLopener
+from urllib.request import urlopen
+from urllib.error import HTTPError
 
-from pacshare.progressbar import ProgressBar
+from progressbar import Bar, ETA, FileTransferSpeed, \
+                        Percentage, ProgressBar
 
-class MyURLOpener(FancyURLopener):
-    def http_error_404(self, url, fp, errcode, errmsg, headers):
-        print(url, errcode, errmsg)
+
+def get_progressbar(filename, maxval):
+    widgets = ['{:30}'.format(filename), ETA(), '  ',
+               FileTransferSpeed(), ' ', Bar(), ' ',
+               Percentage()]
+    pbar = ProgressBar(widgets=widgets, maxval=maxval).start()
+    return pbar
+
+def retrieve_data(open_url, save_location):
+    total_size = int(open_url.getheader('Content-Length') or '0')
+    pbar = get_progressbar(os.path.basename(open_url.geturl()), total_size)
+    block_size = 4096
+
+    try:
+        with open(save_location, 'wb') as filename:
+            while True:
+                chunk = open_url.read(block_size)
+                if not chunk:
+                    break
+                pbar.update(pbar.currval + len(chunk))
+                filename.write(chunk)
+    finally:
+        pbar.finish()
 
 def main():
     parser = argparse.ArgumentParser()
@@ -20,20 +42,24 @@ def main():
     args = parser.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
 
-    org_url = args.url
-    package = os.path.basename(org_url)
     save_location = args.filename
+    #urls = ['http://localhost:16661/{}'.format(package), args.url]
+    urls = [args.url]
 
-    pb = ProgressBar(filename=package)
-
-
-    url = 'http://localhost:16661/%s' % package
     try:
-        logging.debug('Downloading {} to {}'.format(url, args.filename))
-        MyURLOpener().retrieve(url, save_location, pb.update)
-    except:
-        try:
-            logging.debug('Downloading {} to {}'.format(org_url, args.filename))
-            MyURLOpener().retrieve(org_url, save_location, pb.update)
-        except:
-            pass
+        for url in urls:
+            try:
+                logging.debug('Downloading {} to {}'.format(url, args.filename))
+                open_url = urlopen(url)
+            except HTTPError as e:
+                logging.debug('Error Downloading {} : {}'.format(url, e))
+            except Exception:
+                logging.exception('Downloading {}'.format(url))
+            else:
+                retrieve_data(open_url, save_location)
+                return 0
+        logging.error('Could not retrieve file from any url.')
+        return 1
+    except KeyboardInterrupt as e:
+        logging.debug('User pressed CTRL-C')
+        return 1
