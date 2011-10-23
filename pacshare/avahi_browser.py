@@ -55,8 +55,10 @@ class AvahiBrowser(object):
                 self.all_for_now = True
                 self.mainloop.quit()
             else:
+                self.all_for_now = True
                 print('All for now')
         elif signal == 'ItemNew':
+            self.all_for_now = False
             (interface, protocol, name, service_type, domain, flags) = params
             local = False
             if flags & avahi.LOOKUP_RESULT_LOCAL:
