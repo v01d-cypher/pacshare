@@ -51,11 +51,10 @@ class AvahiBrowser(object):
         #print(signal, params)
 
         if signal == 'AllForNow':
+            self.all_for_now = True
             if not self.daemon:
-                self.all_for_now = True
                 self.mainloop.quit()
             else:
-                self.all_for_now = True
                 print('All for now')
         elif signal == 'ItemNew':
             self.all_for_now = False
