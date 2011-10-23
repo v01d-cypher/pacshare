@@ -10,6 +10,7 @@ class AvahiBrowser(object):
     def __init__(self, **kwargs):
         self.daemon = kwargs.get('daemon', False)
         self.service_type = kwargs.get('service_type', '_workstation._tcp')
+        self.show_local = kwargs.get('show_local', False)
         self.services = {}
         self.all_for_now = False
         self.connected = False
@@ -53,7 +54,6 @@ class AvahiBrowser(object):
             if not self.daemon:
                 self.all_for_now = True
                 self.mainloop.quit()
-                return
             else:
                 print('All for now')
         elif signal == 'ItemNew':
@@ -88,7 +88,7 @@ class AvahiBrowser(object):
         #AvahiLookupResultFlags flags,
 
         event = service[1]
-        if event == avahi.RESOLVER_FOUND and not local:
+        if event == avahi.RESOLVER_FOUND and (self.show_local or not local):
             name = service[2]
             self.services[name] = {
                 'type': service[3],
@@ -101,7 +101,7 @@ class AvahiBrowser(object):
 
 if __name__ == '__main__':
     from pprint import pprint
-    ab = AvahiBrowser(service_type='_workstation._tcp')
+    ab = AvahiBrowser(service_type='_workstation._tcp', show_local=True)
     if ab.connected:
         while not ab.all_for_now:
             pass
