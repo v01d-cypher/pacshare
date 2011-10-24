@@ -6,62 +6,51 @@ from pacshare.dbus import DBus
 
 GObject.threads_init()
 
+
 class AvahiBrowser(object):
     def __init__(self, **kwargs):
-        self.daemon = kwargs.get('daemon', False)
         self.service_type = kwargs.get('service_type', '_workstation._tcp')
         self.show_local = kwargs.get('show_local', False)
+        self.avahi_server = None
         self.services = {}
-        self.all_for_now = False
         self.connected = False
 
         self.bus = DBus('SYSTEM')
-        self.mainloop = GObject.MainLoop()
 
-        self.avahi_server = self._get_avahi_server()
+        self._get_avahi_server()
         if self.avahi_server:
-            self.avahi_browser = self._get_avahi_browser(self.avahi_server)
-            self.mainloop.run()
+            self._get_avahi_browser(self.avahi_server)
 
     def _get_avahi_server(self):
         try:
-            avahi_server = self.bus.get(avahi.DBUS_NAME,
-                                        avahi.DBUS_PATH_SERVER,
-                                        avahi.DBUS_INTERFACE_SERVER)
+            self.avahi_server = self.bus.get(avahi.DBUS_NAME,
+                                             avahi.DBUS_PATH_SERVER,
+                                             avahi.DBUS_INTERFACE_SERVER)
         except:
             print("Can't connect to avahi daemon")
         else:
             self.connected = True
-            return avahi_server
 
     def _get_avahi_browser(self, server):
-        avahi_browser = self.bus.get(avahi.DBUS_NAME,
-                                     server.ServiceBrowserNew('(iissu)', # D-Bus type signature
-                                                              avahi.IF_UNSPEC,
-                                                              avahi.PROTO_UNSPEC,
-                                                              self.service_type,
-                                                              'local',
-                                                              0),
-                                     avahi.DBUS_INTERFACE_SERVICE_BROWSER)
-        avahi_browser.connect('g-signal', self.on_g_signal)
-        return avahi_browser
+        self.avahi_browser = self.bus.get(avahi.DBUS_NAME,
+                                          server.ServiceBrowserNew('(iissu)', # D-Bus type signature
+                                                                   avahi.IF_UNSPEC,
+                                                                   avahi.PROTO_UNSPEC,
+                                                                   self.service_type,
+                                                                   'local',
+                                                                   0),
+                                          avahi.DBUS_INTERFACE_SERVICE_BROWSER)
+        self.avahi_browser.connect('g-signal', self.on_g_signal)
 
     def on_g_signal(self, proxy, sender, signal, params):
         params = params.unpack()
         #print(signal, params)
 
         if signal == 'AllForNow':
-            self.all_for_now = True
-            if not self.daemon:
-                self.mainloop.quit()
-            else:
-                print('All for now')
+            print('All for now')
         elif signal == 'ItemNew':
-            self.all_for_now = False
             (interface, protocol, name, service_type, domain, flags) = params
-            local = False
-            if flags & avahi.LOOKUP_RESULT_LOCAL:
-                local = True
+            local = flags & avahi.LOOKUP_RESULT_LOCAL
             try:
                 service = self.avahi_server.ResolveService('(iisssiu)', # D-Bus type signature
                                                            interface,
@@ -101,16 +90,12 @@ class AvahiBrowser(object):
                 'flags': service[10],}
 
 if __name__ == '__main__':
-    from pprint import pprint
-    ab = AvahiBrowser(service_type='_workstation._tcp', show_local=True)
-    if ab.connected:
-        while not ab.all_for_now:
-            pass
+    mainloop = GObject.MainLoop()
 
-        for service, params in ab.services.items():
-            print(service)
-            pprint(params)
+    browser = AvahiBrowser(service_type='_pacshare._tcp')
 
+    if browser.connected:
+        mainloop.run()
 
 # Can't get this to work yet.
 #from gi.repository import Avahi
