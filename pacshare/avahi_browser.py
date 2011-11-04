@@ -45,6 +45,18 @@ class AvahiBrowser(object):
     def on_g_signal(self, proxy, sender, signal, params):
         params = params.unpack()
         #print(signal, params)
+        #if signal == 'ItemNew':
+        #    (interface, protocol, name, _type, domain, flags) = params
+        #    ours = bool(flags & 8)
+        #    print(ours)
+        #    #(ip, port) = avahi.ResolveService('(iisssiu)',
+        #    #    interface, protocol, name, _type, domain, -1, 0
+        #    #)[7:9]
+        #    all_ = self.avahi_server.ResolveService('(iisssiu)',
+        #        interface, protocol, name, _type, domain, -1, 0
+        #    )
+        #    print(all_)
+        #    #print(ip, port)
 
         if signal == 'AllForNow':
             print('All for now')
@@ -77,8 +89,7 @@ class AvahiBrowser(object):
         #AvahiStringList *txt,
         #AvahiLookupResultFlags flags,
 
-        event = service[1]
-        if event == avahi.RESOLVER_FOUND and (self.show_local or not local):
+        if self.show_local or not local:
             name = service[2]
             self.services[name] = {
                 'type': service[3],
@@ -88,14 +99,14 @@ class AvahiBrowser(object):
                 'port': service[8],
                 'txt': service[9],
                 'flags': service[10],}
+            print(self.services[name])
 
 if __name__ == '__main__':
     mainloop = GObject.MainLoop()
 
-    browser = AvahiBrowser(service_type='_pacshare._tcp')
+    browser = AvahiBrowser(service_type='_workstation._tcp', show_local=True)
 
-    if browser.connected:
-        mainloop.run()
+    mainloop.run()
 
 # Can't get this to work yet.
 #from gi.repository import Avahi
