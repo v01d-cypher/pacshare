@@ -1,52 +1,66 @@
-import os
-import shutil
+import argparse
+import logging
 
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from webob.dec import wsgify
+from webob import Response
+import webob.exc
 
-class PacShareHTTPRequestHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        """Serve a GET request."""
-        f = self.get_file()
-        if f:
-            shutil.copyfileobj(f, self.wfile)
-            f.close()
+import pyalpm
+from pycman import config
 
-    def get_file(self):
-        #repo,os,arch
-
-        cache_root = '/var/cache/pacman/pkg'
-
-        cache_structure = 'flat'
-        #cache_structure = 'Arch Mirror'
-
-        path = self.path.strip('/')
-
-        if cache_structure == 'Arch Mirror':
-            pass
-        elif cache_structure == 'flat':
-            path = os.path.basename(path)
-            #if path.endswith('.db'):
-            #    cache_root = '/var/lib/pacman/sync'
-
-        package_location = os.path.join(cache_root, path)
-
-        f = None
-
+class Application(object):
+    def __init__(self, config_file='/etc/pacman.conf'):
+        # TODO - check for changes in this file, and reload
+        config.init_with_config(config_file)
+    
+    @wsgify
+    def __call__(self, request):
+        path = request.path.rstrip('/').split('/')[1:]
+        lenpath = len(path)
+        
+        dbs = dict(((db.name, db) for db in pyalpm.get_syncdbs()))
+        if lenpath == 0:
+            return self.list(dbs.keys())
+        
         try:
-            f = open(package_location, 'rb')
-        except IOError:
-            self.send_error(404, "File not found")
-            return None
+            db = dbs[path[0]]
+        except KeyError:
+            return webob.exc.HTTPNotFound()
+        
+        if lenpath==1:
+            return self.list(('os',))
+        
+        if lenpath==2:
+            return self.list((pyalpm.options.arch,))
+        
+        if lenpath==4:
+            if path[3] == '{}.db'.format(path[0]):
+                return Response('db!')
+        
+        return webob.exc.HTTPNotFound()
+    
+    def list(self, items):
+        r = Response()
+        r.text = ''.join('<a href="{0}/">{0}</a><br/>\n'.format(item)
+                         for item in items)
+        return r
+    
 
-        self.send_response(200)
-        self.send_header("Content-type", 'application/octet-stream')
-        fs = os.fstat(f.fileno())
-        self.send_header("Content-Length", str(fs[6]))
-        self.send_header("Last-Modified", self.date_time_string(fs.st_mtime))
-        self.end_headers()
-        return f
-
-
-server_address = ('', 16661)
-httpd = HTTPServer(server_address, PacShareHTTPRequestHandler)
-httpd.serve_forever()
+def main():
+    parser = argparse.ArgumentParser()
+    args = parser.parse_args()
+    
+    # TODO config file
+    logging.basicConfig(level=logging.DEBUG)
+    
+    from wsgiref.simple_server import make_server
+    
+    app = Application()    
+    httpd = make_server('', 8000, app)
+    
+    logging.info('Starting server.')
+    
+    try:
+        httpd.serve_forever()
+    finally:
+        logging.info('Stoping server.')

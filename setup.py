@@ -19,12 +19,14 @@ setup(name='pacshare',
       include_package_data=True,
       zip_safe=True,
       install_requires=[
-          'progressbar'
-          # -*- Extra requirements: -*-
+          'progressbar',
+          'pyalpm',
+          'WebOb>=1.2b2',
       ],
       entry_points = {
           'console_scripts': [
-              'xferclient = pacshare.xferclient:main',
+              'pacshare-xferclient = pacshare.xferclient:main',
+              'pacshare-server = pacshare.server:main',
           ],
         },
       )
