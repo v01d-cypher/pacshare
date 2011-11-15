@@ -1,5 +1,6 @@
 import argparse
 import logging
+import socket
 
 from webob.dec import wsgify
 from webob import Response
@@ -7,6 +8,7 @@ import webob.exc
 
 import pyalpm
 from pycman import config
+from pacshare import avahi
 
 class Application(object):
     def __init__(self, config_file='/etc/pacman.conf'):
@@ -55,12 +57,16 @@ def main():
     
     from wsgiref.simple_server import make_server
     
-    app = Application()    
-    httpd = make_server('', 8000, app)
+    app = Application()
+    PORT = 16661
+    httpd = make_server('', PORT, app)
     
+    avahi.entry_group_add_service('pacshare on {}'.format(socket.gethostname()),
+                                  '_pacshare._tcp', port=PORT)
     logging.info('Starting server.')
     
     try:
         httpd.serve_forever()
     finally:
         logging.info('Stoping server.')
+
