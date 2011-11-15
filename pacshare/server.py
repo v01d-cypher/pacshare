@@ -1,7 +1,10 @@
 import os
 import shutil
-
+import socket
 from http.server import HTTPServer, BaseHTTPRequestHandler
+
+from pacshare import avahi
+
 
 class PacShareHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -46,7 +49,11 @@ class PacShareHTTPRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         return f
 
-
-server_address = ('', 16661)
+PORT = 16661
+server_address = ('', PORT)
 httpd = HTTPServer(server_address, PacShareHTTPRequestHandler)
+
+avahi.entry_group_add_service('pacshare on {}'.format(socket.gethostname()),
+                              '_pacshare._tcp', port=PORT)
 httpd.serve_forever()
+
