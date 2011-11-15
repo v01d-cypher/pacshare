@@ -59,17 +59,22 @@ def main():
     
     logging.basicConfig(level=logging.DEBUG)
     
-    from wsgiref.simple_server import make_server
-    
-    app = Application()
-    httpd = make_server(args.host, args.port, app)
-    
-    avahi.entry_group_add_service('pacshare on {}'.format(socket.gethostname()),
-                                  '_pacshare._tcp', port=args.port, host=args.host)
-    logging.info('Starting server.')
-    
     try:
-        httpd.serve_forever()
-    finally:
-        logging.info('Stoping server.')
+        from wsgiref.simple_server import make_server
+        
+        app = Application()
+        httpd = make_server(args.host, args.port, app)
+        
+        avahi.entry_group_add_service('pacshare on {}'.format(socket.gethostname()),
+                                      '_pacshare._tcp', port=args.port, host=args.host)
+        logging.info('Starting server.')
+        
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt as e:
+            logging.info('Keyboard Interrupt')
+        finally:
+            logging.info('Server stoped.')
+    except:
+        logging.exception('')
 
