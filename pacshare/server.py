@@ -50,19 +50,22 @@ class Application(object):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--host', help='Host for server to listen on.',
+                        default='')
+    parser.add_argument('--port', help='Port for server to listen on.',
+                        default=8330)
     args = parser.parse_args()
+    # TODO config file for server, logging, and alpm options.
     
-    # TODO config file
     logging.basicConfig(level=logging.DEBUG)
     
     from wsgiref.simple_server import make_server
     
     app = Application()
-    PORT = 16661
-    httpd = make_server('', PORT, app)
+    httpd = make_server(args.host, args.port, app)
     
     avahi.entry_group_add_service('pacshare on {}'.format(socket.gethostname()),
-                                  '_pacshare._tcp', port=PORT)
+                                  '_pacshare._tcp', port=args.port, host=args.host)
     logging.info('Starting server.')
     
     try:
