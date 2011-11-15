@@ -1,52 +1,64 @@
+import os
 import argparse
 import logging
 import socket
+import mimetypes
 
 from webob.dec import wsgify
 from webob import Response
 import webob.exc
 
-import pyalpm
-from pycman import config
+from pycman.config import PacmanConfig
 from pacshare import avahi
 
-class Application(object):
-    def __init__(self, config_file='/etc/pacman.conf'):
-        # TODO - check for changes in this file, and reload
-        config.init_with_config(config_file)
+class FileIterable(object):
+    def __init__(self, filename):
+        self.filename = filename
+    def __iter__(self):
+        return FileIterator(self.filename)
+
+class FileIterator(object):
+    chunk_size = 4096
+    def __init__(self, filename):
+        self.filename = filename
+        self.fileobj = open(self.filename, 'rb')
+    def __iter__(self):
+        return self
+    def __next__(self):
+        chunk = self.fileobj.read(self.chunk_size)
+        if not chunk:
+            raise StopIteration
+        return chunk
+
+class WsgiApplication(object):
+    def __init__(self, config):
+        self.config = config
     
     @wsgify
     def __call__(self, request):
         path = request.path.rstrip('/').split('/')[1:]
-        lenpath = len(path)
-        
-        dbs = dict(((db.name, db) for db in pyalpm.get_syncdbs()))
-        if lenpath == 0:
-            return self.list(dbs.keys())
-        
-        try:
-            db = dbs[path[0]]
-        except KeyError:
+        if len(path) > 1:
             return webob.exc.HTTPNotFound()
         
-        if lenpath==1:
-            return self.list(('os',))
+        cachedirs = self.config.options.get(
+            'CacheDir',
+            ['/var/cache/pacman/pkg']) # Older versions of pycman.config did not have a default for CacheDir
         
-        if lenpath==2:
-            return self.list((pyalpm.options.arch,))
-        
-        if lenpath==4:
-            if path[3] == '{}.db'.format(path[0]):
-                return Response('db!')
+        for cachedir in cachedirs:
+            filepath = os.path.join(cachedir, path[0])
+            if os.path.exists(filepath):
+                res = Response()
+                type, encoding = mimetypes.guess_type(filepath)
+                # We'll ignore encoding, even though we shouldn't really
+                res.content_type = type or 'application/octet-stream'
+                res.app_iter = FileIterable(filepath)
+                res.content_length = os.path.getsize(filepath)
+                res.last_modified = os.path.getmtime(filepath)
+                res.conditional_response = True
+                return res
         
         return webob.exc.HTTPNotFound()
-    
-    def list(self, items):
-        r = Response()
-        r.text = ''.join('<a href="{0}/">{0}</a><br/>\n'.format(item)
-                         for item in items)
-        return r
-    
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -54,16 +66,20 @@ def main():
                         default='')
     parser.add_argument('--port', help='Port for server to listen on.',
                         default=8330)
+    parser.add_argument('--pacman-config', help='Config file for pacman.',
+                        default='/etc/pacman.conf')
     args = parser.parse_args()
     # TODO config file for server, logging, and alpm options.
     
     logging.basicConfig(level=logging.DEBUG)
     
     try:
-        from wsgiref.simple_server import make_server
+        # TODO - check for changes in this file, and reload
+        config = PacmanConfig(conf=args.pacman_config)
+        wsgi_app = WsgiApplication(config)
         
-        app = Application()
-        httpd = make_server(args.host, args.port, app)
+        from wsgiref.simple_server import make_server
+        httpd = make_server(args.host, args.port, wsgi_app)
         
         avahi.entry_group_add_service('pacshare on {}'.format(socket.gethostname()),
                                       '_pacshare._tcp', port=args.port, host=args.host)
