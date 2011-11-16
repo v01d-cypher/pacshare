@@ -89,6 +89,8 @@ DBUS_INTERFACE_HOST_NAME_RESOLVER = DBUS_NAME + ".HostNameResolver"
 DBUS_INTERFACE_SERVICE_RESOLVER = DBUS_NAME + ".ServiceResolver"
 DBUS_INTERFACE_RECORD_BROWSER = DBUS_NAME + ".RecordBrowser"
 
+import collections
+
 from gi.repository import Gio, GObject
 
 GObject.threads_init()
@@ -126,3 +128,46 @@ def entry_group_add_service(name, type,
                            interface,  protocol, flags, name, type,
                            domain, host, port, txt)
     entry_group.Commit()
+
+
+Service = collections.namedtuple(
+    'Service', ('interface', 'protocol', 'name', 'type', 'domain', 'flags'))
+
+def service_browser_get_cache(type, domain='local',
+                              interface=Interface.UNSPEC,
+                              protocol=Protocol.UNSPEC,
+                              flags=0):
+    """Does a service browse, and returns all items as a list once all items from the cache are returned."""
+
+    mainloop = GObject.MainLoop()
+    services = []
+    
+    def on_g_signal(proxy, sender, signal, params):
+        params = params.unpack()
+        if signal == 'ItemNew':
+            services.append(Service(*params))
+        if signal == 'AllForNow':
+            mainloop.quit()
+    
+    browser = system.get(
+        DBUS_NAME,
+        server.ServiceBrowserNew('(iissu)', interface, protocol,
+                                 type, domain, flags),
+        DBUS_INTERFACE_SERVICE_BROWSER)
+    browser.connect('g-signal', on_g_signal)
+    mainloop.run()
+    return services
+
+ResolvedService = collections.namedtuple(
+    'ResolvedService', ('interface', 'protocol', 'name', 'type', 'domain',
+                        'host_name', 'unknown1', 'address', 'port', 'txt',
+                        'flags'))
+
+def resolve_service(name, _type, domain,
+                    interface=Interface.UNSPEC,
+                    protocol=Protocol.UNSPEC,
+                    address_protocol=Protocol.UNSPEC,
+                    flags=0):
+    return ResolvedService(
+        *server.ResolveService('(iisssiu)',
+            interface, protocol, name, _type, domain, address_protocol, flags))

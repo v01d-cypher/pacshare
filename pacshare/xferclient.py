@@ -2,12 +2,17 @@ import argparse
 import logging
 import os
 import sys
+import random
+import re
 
 from urllib.request import urlopen
 from urllib.error import HTTPError
+from urllib.parse import urlparse
 
 from progressbar import Bar, ETA, FileTransferSpeed, \
                         Percentage, ProgressBar
+
+from pacshare import avahi
 
 
 def get_progressbar(filename, maxval):
@@ -39,6 +44,27 @@ def retrieve_data(open_url, save_location):
         if pbar.start_time is not None:
             pbar.finish()
 
+
+package_re = re.compile('.*/(.*\.pkg\.tar\.xz)$')
+def gen_urls(url):
+    up = urlparse(url)
+    package_name_match = package_re.search(up.path)
+    if package_name_match:
+        logging.debug('Package detected. Atempting to fetch from peer pacshares.')
+        services = avahi.service_browser_get_cache('_pacshare._tcp')
+        # remove the duplicats due to multiple interfaces/protocals.
+        services = list(dict((service.name, service) for service in services).values())
+        random.shuffle(services)
+        for service in services:
+            if not (service.flags & avahi.LookupResultFlags.LOCAL):
+                resolved_service = avahi.resolve_service(service.name, service.type, service.domain)
+                
+                logging.debug('Atempting fetch from {}'.format(resolved_service.host_name))
+                yield 'http://{}:{}/{}'.format(
+                    resolved_service.address, resolved_service.port,
+                    package_name_match.group(1))
+    yield url
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--verbose', action='store_true')
@@ -48,12 +74,9 @@ def main():
     args = parser.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
 
-    save_location = args.filename
-    #urls = ['http://localhost:16661/{}'.format(package), args.url]
-    urls = [args.url]
-
+    
     try:
-        for url in urls:
+        for url in gen_urls(args.url):
             try:
                 logging.debug('Downloading {} to {}'.format(url, args.filename))
                 open_url = urlopen(url)
@@ -62,7 +85,7 @@ def main():
             except Exception:
                 logging.exception('Downloading {}'.format(url))
             else:
-                retrieve_data(open_url, save_location)
+                retrieve_data(open_url, args.filename)
                 return 0
         logging.error('Could not retrieve file from any url.')
         return 1
