@@ -52,7 +52,7 @@ def gen_urls(url):
     if package_name_match:
         logging.debug('Package detected. Atempting to fetch from peer pacshares.')
         services = avahi.service_browser_get_cache('_pacshare._tcp')
-        # remove the duplicats due to multiple interfaces/protocals.
+        # remove the duplicates due to multiple interfaces/protocals.
         services = list(dict((service.name, service) for service in services).values())
         random.shuffle(services)
         for service in services:
