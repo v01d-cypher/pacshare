@@ -89,7 +89,7 @@ def fetch_url(url, filename):
     log_handler.pbar = pbar
     
     try:
-        old_file_last_modified = None
+        last_modified = None
         if filename.endswith('.part'):
             old_file_path = filename[:-5]
             try:
@@ -116,7 +116,7 @@ def fetch_url(url, filename):
                 response = urlopen(request)
                 
                 response_last_modified = parse_date(response.headers['last-modified'])
-                if last_modified >= response_last_modified:
+                if last_modified and last_modified >= response_last_modified:
                     response.close()
                     return not_modified_use_old_file()
                 
