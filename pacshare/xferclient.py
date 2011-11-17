@@ -4,11 +4,14 @@ import os
 import sys
 import random
 import re
+import datetime
+import shutil
 
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 
+from webob.datetime_utils import parse_date, serialize_date, UTC
 import progressbar
 
 from pacshare import avahi
@@ -34,7 +37,7 @@ def main():
         else:
             return 2
     except KeyboardInterrupt as e:
-        logging.debug('User pressed CTRL-C')
+        logging.error('Interrupt signal received')
         return 1
     except:
         logging.exception('')
@@ -70,35 +73,70 @@ def get_pacshare_peers():
             service.name, service.type, service.domain)
 
 
+def http_date_to_datetime(s):
+    return datetime.datetime.strptime(s, '%a, %d %b %Y %H:%M:%S %z')
+
 package_re = re.compile('(.*)\.pkg\.tar\.xz$')
 def fetch_url(url, filename):
     status_widget = ProgressBarStatusWidget()
-    pbar = progressbar.ProgressBar(widgets=[
-        status_widget, '  ',
-        progressbar.ETA(), '  ', progressbar.FileTransferSpeed(), ' ',
-        progressbar.Bar(), ' ',
-        progressbar.Percentage()], maxval=100)
+    pbar = progressbar.ProgressBar(widgets=[status_widget], maxval=0)
     progressbar.ProgressBar._need_update = lambda self: True
-    
+
+    status_widget.format = '{0.resource_name} {0.server_from}'
+    status_widget.resource_name = ''
+    status_widget.server_from = ''
+    pbar.start()
     log_handler.pbar = pbar
+    
     try:
-        status_widget.format = '{0.resource_name} {0.server_from}'
-        status_widget.resource_name = ''
-        status_widget.server_from = ''
+        old_file_last_modified = None
+        if filename.endswith('.part'):
+            old_file_path = filename[:-5]
+            try:
+                last_modified = datetime.datetime.fromtimestamp(
+                    os.path.getmtime(old_file_path),
+                    UTC)
+            except OSError:
+                pass # Most likly the file does not exist.
+        
+        def not_modified_use_old_file():
+            logging.debug("{} not modified, using {}".format(url, old_file_path))
+            shutil.copyfile(old_file_path, filename)
+            status_widget.format = '{0.resource_name} {0.server_from} - Not modified.'
+            pbar.finish()
+            return True
         
         def _fetch_url(url, error_level=logging.ERROR):
             try:
                 logging.debug('Downloading {} to {}'.format(url, filename))
                 pbar.update()
-                open_url = urlopen(url)
-                total_size = int(open_url.getheader('Content-Length') or '0')
+                request = Request(url)
+                if last_modified:
+                    request.headers['If-Modified-Since'] = serialize_date(last_modified)
+                response = urlopen(request)
+                
+                response_last_modified = parse_date(response.headers['last-modified'])
+                if last_modified >= response_last_modified:
+                    response.close()
+                    return not_modified_use_old_file()
+                
+                total_size = int(response.getheader('Content-Length') or '0')
+                
                 if total_size:
                     pbar.maxval = total_size
+                    pbar.widgets = [status_widget, '  ',
+                                    progressbar.ETA(), '  ', progressbar.FileTransferSpeed(), ' ',
+                                    progressbar.Bar(), ' ',
+                                    progressbar.Percentage()]
+                    pbar.update
+                else:
+                    # what pbar widget do we need here?
+                    pass
                 
                 block_size = 1024        
                 with open(filename, 'wb') as file:
                     while True:
-                        chunk = open_url.read(block_size)
+                        chunk = response.read(block_size)
                         if not chunk:
                             break
                         file.write(chunk)
@@ -107,6 +145,8 @@ def fetch_url(url, filename):
                 pbar.finish()
                 return True
             except HTTPError as e:
+                if e.code == 304:
+                    return not_modified_use_old_file()
                 logging.log(error_level, 'Downloading {} : {}'.format(url, e))
                 return False
             except Exception:
@@ -116,8 +156,6 @@ def fetch_url(url, filename):
         up = urlparse(url)
         path = up.path.split('/')[1:]
         status_widget.resource_name = path[-1]
-        
-        pbar.start()
         
         package_name_match = package_re.match(path[-1])
         if package_name_match:
