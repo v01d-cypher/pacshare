@@ -90,42 +90,28 @@ DBUS_INTERFACE_SERVICE_RESOLVER = DBUS_NAME + ".ServiceResolver"
 DBUS_INTERFACE_RECORD_BROWSER = DBUS_NAME + ".RecordBrowser"
 
 import collections
+import dbus
+from dbus.mainloop.glib import DBusGMainLoop
+DBusGMainLoop(set_as_default=True)
 
-from gi.repository import Gio, GObject
+def _dbus_get(bus, bus_name):
+    def _dbus_get_inner(path, interface):
+        return dbus.Interface(bus.get_object(bus_name, path),
+                              dbus_interface=interface)
+    return _dbus_get_inner
 
-GObject.threads_init()
-
-class DBus:
-    def __init__(self, conn):
-        self.conn = conn
-
-    def get(self, bus, path, iface=None):
-        if iface is None:
-            iface = bus
-        return Gio.DBusProxy.new_sync(
-            self.conn, 0, None, bus, path, iface, None
-        )
-
-    def get_async(self, callback, bus, path, iface=None):
-        if iface is None:
-            iface = bus
-        Gio.DBusProxy.new(
-            self.conn, 0, None, bus, path, iface, None, callback, None
-        )
-
-
-system = DBus(Gio.bus_get_sync(Gio.BusType.SYSTEM, None))
-server = system.get(DBUS_NAME, '/', DBUS_INTERFACE_SERVER)
-entry_group = system.get(DBUS_NAME, server.EntryGroupNew(),
-                         DBUS_INTERFACE_ENTRY_GROUP)
+system_bus = dbus.SystemBus()
+avahi_bus_get = _dbus_get(system_bus, DBUS_NAME)
+server = avahi_bus_get('/', DBUS_INTERFACE_SERVER)
 
 def entry_group_add_service(name, type,
-                            domain='', host='', port=0, txt=None,
+                            domain='', host='', port=0, txt=(),
                             interface=Interface.UNSPEC,
                             protocol=Protocol.UNSPEC,
                             flags=0):
-    entry_group.AddService('(iiussssqaay)',
-                           interface,  protocol, flags, name, type,
+    entry_group = avahi_bus_get(server.EntryGroupNew(),
+                                DBUS_INTERFACE_ENTRY_GROUP)
+    entry_group.AddService(interface,  protocol, flags, name, type,
                            domain, host, port, txt)
     entry_group.Commit()
 
@@ -138,23 +124,20 @@ def service_browser_get_cache(type, domain='local',
                               protocol=Protocol.UNSPEC,
                               flags=0):
     """Does a service browse, and returns all items as a list once all items from the cache are returned."""
-
-    mainloop = GObject.MainLoop()
+    import gobject
+    mainloop = gobject.MainLoop()
+    
     services = []
     
-    def on_g_signal(proxy, sender, signal, params):
-        params = params.unpack()
-        if signal == 'ItemNew':
-            services.append(Service(*params))
-        if signal == 'AllForNow':
-            mainloop.quit()
+    def item_new(*args):
+        services.append(Service(*args))
+        
+    browser = avahi_bus_get(server.ServiceBrowserNew(interface, protocol, type,
+                                                     domain, flags),
+                            DBUS_INTERFACE_SERVICE_BROWSER)
+    browser.connect_to_signal("ItemNew", item_new)
+    browser.connect_to_signal("AllForNow", mainloop.quit)
     
-    browser = system.get(
-        DBUS_NAME,
-        server.ServiceBrowserNew('(iissu)', interface, protocol,
-                                 type, domain, flags),
-        DBUS_INTERFACE_SERVICE_BROWSER)
-    browser.connect('g-signal', on_g_signal)
     mainloop.run()
     return services
 
@@ -169,5 +152,5 @@ def resolve_service(name, _type, domain,
                     address_protocol=Protocol.UNSPEC,
                     flags=0):
     return ResolvedService(
-        *server.ResolveService('(iisssiu)',
-            interface, protocol, name, _type, domain, address_protocol, flags))
+        *server.ResolveService(interface, protocol, name, _type, domain,
+                               address_protocol, flags))
