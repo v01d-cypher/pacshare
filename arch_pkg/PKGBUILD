@@ -1,14 +1,16 @@
 # Maintainer : Nevar <psi.neamf@gmail.com>
+# Contributor: Gary van der Merwe <garyvdm@gmail.com>
 
 pkgname=pacshare
-pkgver=20111116
+pkgver=20111221
 pkgrel=1
 pkgdesc="Share pacman packages on the LAN."
 arch=('i686' 'x86_64')
 url="https://github.com/psi-neamf/pacshare"
 license=('GPL')
-makedepends=('python-distribute')
-depends=('avahi' 'python' 'python-progressbar' 'python-webob')
+makedepends=()
+depends=('avahi' 'python' 'python-progressbar' 'python-webob'
+         'python-distribute' 'pyalpm' 'python-dbus' 'dbus-glib')
 install=pacshare.install
 source=("pacshare-daemon"
         "pacshare-daemon.conf"
