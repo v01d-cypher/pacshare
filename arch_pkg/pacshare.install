@@ -1,0 +1,14 @@
+post_install() {
+  mkdir -p /var/log/pacshare
+  touch /var/log/pacshare/server.log
+  echo "To use pacshare, set XferCommand = /usr/lib/pacshare-xferclient %u %o in /etc/pacman.conf"
+  echo "To share your packages with users on the LAN, add pacshare to the DAEMONS array in /etc/rc.conf"
+  echo "It will load on your next reboot. Run # rc.d start pacshare to begin sharing immediately."
+}
+
+post_remove() {
+  echo "Remember to comment/remove the pacshare-xferclient from /etc/pacman.conf"
+  echo "and also pacshare from the DAEMONS array in /etc/rc.conf"
+}
+
+# vim:set ts=2 sw=2 et:

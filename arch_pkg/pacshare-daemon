@@ -1,0 +1,66 @@
+#!/bin/bash
+
+daemon_name=pacshare-server
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+[ -f /etc/conf.d/$daemon_name.conf ] && . /etc/conf.d/$daemon_name.conf
+
+[ "$HOST" ] && options="--host $HOST"
+[ "$PORT" ] && options="$options --port $PORT"
+[ "$PACMAN_CONF" ] && options="$options --pacman-conf $PACMAN_CONFIG"
+
+get_pid() {
+  pidof -x $daemon_name
+}
+
+case "$1" in
+	start)
+		stat_busy "Starting pacshare daemon"
+
+		PID=$(get_pid)
+		if [[ -z $PID ]]; then
+      [[ -f /var/run/$daemon_name.pid ]] && rm -f /var/run/$daemon_name.pid
+
+      # RUN
+      /usr/lib/$daemon_name $options &>/var/log/pacshare/server.log &
+
+      echo $(get_pid) > /var/run/$daemon_name.pid
+      add_daemon $daemon_name
+      stat_done
+    else
+      stat_fail
+      exit 1
+    fi
+    ;;
+
+	stop)
+		stat_busy "Stopping pacshare daemon"
+		PID=$(get_pid)
+
+		# KILL
+		[[ -n $PID ]] && kill $PID &> /dev/null
+		
+    rm -f /var/run/$daemon_name.pid &> /dev/null
+    rm_daemon $daemon_name
+    stat_done
+		;;
+
+	restart)
+		$0 stop
+		sleep 3
+		$0 start
+		;;
+
+	status)
+		stat_busy "Checking pacshare status";
+		ck_status $daemon_name
+		;;
+
+	*)
+		echo "usage: $0 {start|stop|restart|status}"
+esac
+
+exit 0
+
+# vim:set ts=2 sw=2 et:
