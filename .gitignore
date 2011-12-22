@@ -1,2 +1,5 @@
 pacshare.egg-info
+ve
+arch_pkg/src
+arch_pkg/pkg
 *.pyc
