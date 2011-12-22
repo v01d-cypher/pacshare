@@ -77,6 +77,8 @@ def http_date_to_datetime(s):
     return datetime.datetime.strptime(s, '%a, %d %b %Y %H:%M:%S %z')
 
 package_re = re.compile('(.*)\.pkg\.tar\.xz$')
+delta_package_re = re.compile('(?P<name>.*?)-(?P<oldver>\d.*)_to_(?P<ver>.*)-(?P<arch>.*)\.delta$')
+
 def fetch_url(url, filename):
     status_widget = ProgressBarStatusWidget()
     pbar = progressbar.ProgressBar(widgets=[status_widget], maxval=0)
@@ -157,17 +159,30 @@ def fetch_url(url, filename):
         path = up.path.split('/')[1:]
         status_widget.resource_name = path[-1]
         
+        logging.debug('Filename: {}'.format(path[-1]))
         package_name_match = package_re.match(path[-1])
-        if package_name_match:
-            logging.debug('Package detected.')
-            status_widget.resource_name = package_name_match.group(1)
+        delta_package_name_match = delta_package_re.match(path[-1])
+        if package_name_match or delta_package_name_match:
+            
+            if package_name_match:
+                pkg_name = package_name_match.group(1)
+                pkg_file_name = path[-1]
+            if delta_package_name_match:
+                logging.debug(delta_package_name_match.groupdict())
+                pkg_name = '{name}-{ver}-{arch}'.format(
+                    **delta_package_name_match.groupdict())
+                pkg_file_name = '{}.pkg.tar.xz'.format(pkg_name)
+            
+            logging.debug('Package detected: {}'.format(pkg_file_name))
+            
+            status_widget.resource_name = pkg_name
             status_widget.server_from = 'Getting pacshare peers.'
             pbar.update()
             for peer in get_pacshare_peers():
                 status_widget.server_from = 'from {0.host_name}'.format(peer)
                 fetch_success = _fetch_url(
                     'http://{}:{}/{}'.format(peer.address, peer.port,
-                                             package_name_match.group(0)),
+                                             pkg_file_name),
                     logging.DEBUG)
                 if fetch_success:
                     return True
