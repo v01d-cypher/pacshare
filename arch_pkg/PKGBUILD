@@ -3,14 +3,15 @@
 
 pkgname=pacshare
 pkgver=20111221
-pkgrel=1
+pkgrel=2
 pkgdesc="Share pacman packages on the LAN."
 arch=('i686' 'x86_64')
 url="https://github.com/psi-neamf/pacshare"
 license=('GPL')
 makedepends=()
 depends=('avahi' 'python' 'python-progressbar' 'python-webob'
-         'python-distribute' 'pyalpm' 'python-dbus' 'dbus-glib')
+         'python-distribute' 'pyalpm' 'python-dbus' 'dbus-glib' 
+         'python-gobject2')
 install=pacshare.install
 source=("pacshare-daemon"
         "pacshare-daemon.conf"
