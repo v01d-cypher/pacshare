@@ -8,7 +8,7 @@ import datetime
 import shutil
 
 from urllib.request import urlopen, Request
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 
 from webob.datetime_utils import parse_date, serialize_date, UTC
@@ -144,8 +144,8 @@ def fetch_url(url, filename):
                 logging.debug('Download successfull.')
                 pbar.finish()
                 return True
-            except HTTPError as e:
-                if e.code == 304:
+            except (HTTPError, URLError) as e:
+                if getattr(e, 'code', None) == 304:
                     return not_modified_use_old_file()
                 logging.log(error_level, 'Downloading {} : {}'.format(url, e))
                 return False
