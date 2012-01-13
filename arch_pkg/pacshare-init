@@ -1,6 +1,7 @@
 #!/bin/bash
 
-daemon_name=pacshare-server
+daemon_name=pacshare
+daemon_path=/usr/lib/pacshare-server
 
 . /etc/rc.conf
 . /etc/rc.d/functions
@@ -11,7 +12,7 @@ daemon_name=pacshare-server
 [ "$PACMAN_CONF" ] && options="$options --pacman-conf $PACMAN_CONFIG"
 
 get_pid() {
-  pidof -x $daemon_name
+  pidof -x $daemon_path
 }
 
 case "$1" in
@@ -23,7 +24,7 @@ case "$1" in
       [[ -f /var/run/$daemon_name.pid ]] && rm -f /var/run/$daemon_name.pid
 
       # RUN
-      /usr/lib/$daemon_name $options &>/var/log/pacshare/server.log &
+      $daemon_path $options &>/var/log/pacshare/server.log &
 
       echo $(get_pid) > /var/run/$daemon_name.pid
       add_daemon $daemon_name
