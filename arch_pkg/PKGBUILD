@@ -50,8 +50,8 @@ package() {
   cd $srcdir/$_gitname-build
   python setup.py install --root=${pkgdir} --install-scripts="/usr/lib"
 
-  install -Dp -m0755 ${startdir}/pacshare-daemon ${pkgdir}/etc/rc.d/pacshare
-  install -Dp -m0644 ${startdir}/pacshare-daemon.conf ${pkgdir}/etc/conf.d/pacshare.conf
+  install -Dp -m0755 ${startdir}/pacshare-init ${pkgdir}/etc/rc.d/pacshare
+  install -Dp -m0644 ${startdir}/pacshare-init.conf ${pkgdir}/etc/conf.d/pacshare.conf
   install -Dp -m0644 ${startdir}/pacshare-logrotate ${pkgdir}/etc/logrotate.d/pacshare
 }
 
