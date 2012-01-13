@@ -2,8 +2,8 @@
 # Contributor: Gary van der Merwe <garyvdm@gmail.com>
 
 pkgname=pacshare
-pkgver=20111221
-pkgrel=2
+pkgver=20120113
+pkgrel=1
 pkgdesc="Share pacman packages on the LAN."
 arch=('i686' 'x86_64')
 url="https://github.com/psi-neamf/pacshare"
@@ -13,11 +13,11 @@ depends=('avahi' 'python' 'python-progressbar' 'python-webob'
          'python-distribute' 'pyalpm' 'python-dbus' 'dbus-glib' 
          'python-gobject2')
 install=pacshare.install
-source=("pacshare-daemon"
-        "pacshare-daemon.conf"
+source=("pacshare-init"
+        "pacshare-init.conf"
         "pacshare-logrotate"
         "pacshare.install")
-sha1sums=('76758a69482c345ad2b838a297e19f9bddc46630'
+sha1sums=('debf45f69a41df0e2305610b627609846d0aa267'
           'd294f1ab271fc7e9d8f904568a50136c86fe4eb3'
           '15331ed5b81c8165be28311571503def8c23c923'
           '5f17e4f70a8ca6d1591a5b19dc4db88c0b03b298')
