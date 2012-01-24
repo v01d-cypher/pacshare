@@ -14,6 +14,8 @@ from urllib.parse import urlparse
 from webob.datetime_utils import parse_date, serialize_date, UTC
 import progressbar
 
+import dbus
+
 from pacshare import avahi
 
 def main():
@@ -69,8 +71,15 @@ def get_pacshare_peers():
     else:
         logging.debug('No peers found.')
     for service in services:
-        yield avahi.resolve_service(
-            service.name, service.type, service.domain)
+        try :
+            yield avahi.resolve_service(
+                service.name, service.type, service.domain)
+        except dbus.exceptions.DBusException as e:
+            msg = "Error resolving avahi service:"
+            if (e.get_dbus_name() == 'org.freedesktop.Avahi.TimeoutError'):
+                logging.error(msg + str(e))
+            else:
+                logging.exception(msg)
 
 
 def http_date_to_datetime(s):
