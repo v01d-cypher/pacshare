@@ -7,6 +7,7 @@ import mimetypes
 from webob.dec import wsgify
 from webob import Response
 import webob.exc
+from waitress.server import WSGIServer
 
 from pycman.config import PacmanConfig
 from pacshare import avahi
@@ -69,24 +70,25 @@ def main():
     parser.add_argument('--pacman-config', help='Config file for pacman.',
                         default='/etc/pacman.conf')
     args = parser.parse_args()
-    # TODO config file for server, logging, and alpm options.
     
-    logging.basicConfig(level=logging.DEBUG)
-    
+    # TODO config file for server, logging, and alpm options
+    logging.basicConfig(level=logging.INFO)
     try:
+        logger = logging.getLogger('waitress')
+        logger.setLevel(logging.INFO)
+        
         # TODO - check for changes in this file, and reload
         config = PacmanConfig(conf=args.pacman_config)
         wsgi_app = WsgiApplication(config)
-        
-        from wsgiref.simple_server import make_server
-        httpd = make_server(args.host, args.port, wsgi_app)
-        
         avahi.entry_group_add_service('pacshare on {}'.format(socket.gethostname()),
                                       '_pacshare._tcp', port=args.port, host=args.host)
-        logging.info('Starting server.')
         
+        server = WSGIServer(wsgi_app, host=args.host, port=args.port)
+        
+        logging.info('Starting server http://%s:%s', server.effective_host, server.effective_port)
+
         try:
-            httpd.serve_forever()
+            server.run()
         except KeyboardInterrupt as e:
             logging.info('Keyboard Interrupt')
         finally:

@@ -11,7 +11,7 @@ license=('GPL')
 makedepends=()
 depends=('avahi' 'python' 'python-progressbar' 'python-webob'
          'python-distribute' 'pyalpm' 'python-dbus' 'dbus-glib' 
-         'python-gobject2')
+         'python-gobject2' 'python-waitress')
 install=pacshare.install
 source=("pacshare-init"
         "pacshare-init.conf"
