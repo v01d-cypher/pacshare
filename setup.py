@@ -23,10 +23,8 @@ setup(name='pacshare',
           'pyalpm',
           'WebOb>=1.2b2',
       ],
-      entry_points = {
-          'console_scripts': [
-              'pacshare-xferclient = pacshare.xferclient:main',
-              'pacshare-server = pacshare.server:main',
-          ],
-        },
+      scripts=[
+        'pacshare-xferclient',
+        'pacshare-server',
+      ],
       )

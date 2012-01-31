@@ -1,8 +1,11 @@
-import os
+#!/usr/bin/env python
+
 import argparse
 import logging
-import socket
 import mimetypes
+import os
+import socket
+import sys
 
 from webob.dec import wsgify
 from webob import Response
@@ -96,3 +99,5 @@ def main():
     except:
         logging.exception('')
 
+if __name__ == '__main__':
+    sys.exit(main())

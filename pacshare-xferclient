@@ -1,11 +1,13 @@
+#!/usr/bin/env python
+
 import argparse
+import datetime
 import logging
 import os
-import sys
 import random
 import re
-import datetime
 import shutil
+import sys
 
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError, URLError
@@ -194,3 +196,5 @@ class ProgressBarStatusWidget(progressbar.Widget):
     def update(self, pbar):
         return self.format.format(self, pbar)
 
+if __name__ == '__main__':
+    sys.exit(main())

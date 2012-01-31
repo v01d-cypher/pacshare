@@ -8,9 +8,9 @@ pkgdesc="Share pacman packages on the LAN."
 arch=('i686' 'x86_64')
 url="https://github.com/psi-neamf/pacshare"
 license=('GPL')
-makedepends=()
+makedepends=('python-distribute')
 depends=('avahi' 'python' 'python-progressbar' 'python-webob'
-         'python-distribute' 'pyalpm' 'python-dbus' 'dbus-glib' 
+         'pyalpm' 'python-dbus' 'dbus-glib' 
          'python-gobject2' 'python-waitress')
 install=pacshare.install
 source=("pacshare-init"
