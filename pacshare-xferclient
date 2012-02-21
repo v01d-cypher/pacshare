@@ -8,6 +8,7 @@ import random
 import re
 import shutil
 import sys
+import math
 
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError, URLError
@@ -89,13 +90,11 @@ def http_date_to_datetime(s):
 
 package_re = re.compile('(.*)\.pkg\.tar\.xz$')
 def fetch_url(url, filename):
-    status_widget = ProgressBarStatusWidget()
-    pbar = progressbar.ProgressBar(widgets=[status_widget], maxval=0)
-    progressbar.ProgressBar._need_update = lambda self: True
+    pbar = ProgressBar(maxval=0)
 
-    status_widget.format = '{0.resource_name} {0.server_from}'
-    status_widget.resource_name = ''
-    status_widget.server_from = ''
+    pbar.status_widget.format = '{0.resource_name} {0.server_from}'
+    pbar.status_widget.resource_name = ''
+    pbar.status_widget.server_from = ''
     pbar.start()
     log_handler.pbar = pbar
     
@@ -113,7 +112,7 @@ def fetch_url(url, filename):
         def not_modified_use_old_file():
             logging.debug("{} not modified, using {}".format(url, old_file_path))
             shutil.copyfile(old_file_path, filename)
-            status_widget.format = '{0.resource_name} {0.server_from} - Not modified.'
+            pbar.status_widget.format = '{0.resource_name} {0.server_from} - Not modified.'
             pbar.finish()
             return True
         
@@ -135,11 +134,7 @@ def fetch_url(url, filename):
                 
                 if total_size:
                     pbar.maxval = total_size
-                    pbar.widgets = [status_widget, '  ',
-                                    progressbar.ETA(), '  ', progressbar.FileTransferSpeed(), ' ',
-                                    progressbar.Bar(), ' ',
-                                    progressbar.Percentage()]
-                    pbar.update
+                    pbar.update()
                 else:
                     # what pbar widget do we need here?
                     pass
@@ -166,16 +161,16 @@ def fetch_url(url, filename):
         
         up = urlparse(url)
         path = up.path.split('/')[1:]
-        status_widget.resource_name = path[-1]
+        pbar.status_widget.resource_name = path[-1]
         
         package_name_match = package_re.match(path[-1])
         if package_name_match:
             logging.debug('Package detected.')
-            status_widget.resource_name = package_name_match.group(1)
-            status_widget.server_from = 'Getting pacshare peers.'
+            pbar.status_widget.resource_name = package_name_match.group(1)
+            pbar.status_widget.server_from = 'Getting pacshare peers.'
             pbar.update()
             for peer in get_pacshare_peers():
-                status_widget.server_from = 'from {0.host_name}'.format(peer)
+                pbar.status_widget.server_from = 'from {0.host_name}'.format(peer)
                 fetch_success = _fetch_url(
                     'http://{}:{}/{}'.format(peer.address, peer.port,
                                              package_name_match.group(0)),
@@ -183,7 +178,7 @@ def fetch_url(url, filename):
                 if fetch_success:
                     return True
         
-        status_widget.server_from = 'from {0.netloc}'.format(up)
+        pbar.status_widget.server_from = 'from {0.netloc}'.format(up)
         return _fetch_url(url)
     except:
         pbar.fd.write('\n')
@@ -192,9 +187,66 @@ def fetch_url(url, filename):
         log_handler.pbar = None
 
 
+class ProgressBar(progressbar.ProgressBar):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.status_widget = ProgressBarStatusWidget()
+        self.numbers_widgets = [progressbar.ETA(), '  ', progressbar.FileTransferSpeed(),' ']
+        self.progress_bar = progressbar.Bar(left='[', right=']')
+        self.percentage_widget = progressbar.Percentage()
+    
+    def _need_update(self):
+        # allways update
+        return True
+    
+    def _format_widgets(self):
+        # reimplement so that we look the same as pacman.
+        
+        status_result = ' ' + progressbar.format_updatable(self.status_widget, self) + ' '
+        
+        if self.maxval > 0:
+            width = self.term_width
+            info_width = max(int(math.ceil(width * 6 / 10)),
+                             51)
+            
+            numbers_result = ''.join(progressbar.format_updatable(widget, self)
+                               for widget in self.numbers_widgets)
+            
+            status_width = len(status_result)
+            info_remaining_width = info_width - (status_width + len(numbers_result))
+            if info_remaining_width>=0:
+                info_result = status_result + (' ' * info_remaining_width) + numbers_result
+            else:
+                # not enough space for status and numbers, so just show status
+                info_remaining_width = info_width - status_width
+                if status_width < info_width:
+                    info_result = status_result + (' ' * info_remaining_width)
+                else:
+                    info_result = status_result[:info_width]
+            if len(info_result) != info_width:
+                logging.warn("Len of info_result not correct. Should be %d, and it's %d"
+                             % (info_width, len(info_result)))
+            
+            if width - info_width > 3:
+                percentage_result = progressbar.format_updatable(self.percentage_widget, self)
+                progressbar_width = width - info_width - len(percentage_result)
+                if progressbar_width > 3:
+                    progressbar_result = self.progress_bar.update(self, progressbar_width - 1) + ' '
+                else:
+                    progressbar_result = ''
+                
+                return info_result, progressbar_result, percentage_result
+            else:
+                return info_result,
+        else:
+            return status_result,
+
+
 class ProgressBarStatusWidget(progressbar.Widget):
     def update(self, pbar):
         return self.format.format(self, pbar)
+
 
 if __name__ == '__main__':
     sys.exit(main())
