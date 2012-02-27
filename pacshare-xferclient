@@ -48,22 +48,6 @@ def main():
         logging.exception('')
         return 2
 
-class StreamHandlerProgressBarClear(logging.StreamHandler):
-    
-    def emit(self, record):
-        try:
-            pbar = getattr(self, 'pbar', None)
-            if pbar:
-                pbar.fd.write((' ' * pbar.term_width) + '\r')
-        except:
-            self.handleError(record)
-        super().emit(record)
-        try:
-            if pbar:
-                pbar.update()
-        except:
-            self.handleError(record)
-
 def get_pacshare_peers():
     logging.debug('Getting pacshare peers from avahi.')
     services = avahi.service_browser_get_cache('_pacshare._tcp')
@@ -187,6 +171,21 @@ def fetch_url(url, filename):
     finally:
         log_handler.pbar = None
 
+class StreamHandlerProgressBarClear(logging.StreamHandler):
+    
+    def emit(self, record):
+        try:
+            pbar = getattr(self, 'pbar', None)
+            if pbar:
+                pbar.fd.write((' ' * pbar.term_width) + '\r')
+        except:
+            self.handleError(record)
+        super().emit(record)
+        try:
+            if pbar:
+                pbar.update()
+        except:
+            self.handleError(record)
 
 class ProgressBar(progressbar.ProgressBar):
     
