@@ -111,7 +111,7 @@ def fetch_url(url, filename):
                 
                 response_info = response.info()
                 response_last_modified = parse_date(response_info['last-modified'])
-                if last_modified and last_modified >= response_last_modified:
+                if response_last_modified and last_modified and last_modified >= response_last_modified:
                     response.close()
                     return not_modified_use_old_file()
                 
