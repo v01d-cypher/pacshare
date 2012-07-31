@@ -1,0 +1,6 @@
+[Unit]
+Description=Share packages over the local network
+After=avahi.service
+
+[Service]
+ExecStart=/bin/su root -l -c "/usr/lib/pacshare-server"

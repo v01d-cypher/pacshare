@@ -13,14 +13,12 @@ depends=('avahi' 'python' 'python-progressbar' 'python-webob'
          'pyalpm' 'python-dbus' 'dbus-glib' 
          'python-gobject2' 'python-waitress')
 install=pacshare.install
-source=("pacshare-init"
-        "pacshare-init.conf"
+source=("pacshare.service"
         "pacshare-logrotate"
         "pacshare.install")
-sha1sums=('debf45f69a41df0e2305610b627609846d0aa267'
-          'd294f1ab271fc7e9d8f904568a50136c86fe4eb3'
+sha1sums=('fda781293a938b21323a9268be6bd8b122c6e90d'
           '15331ed5b81c8165be28311571503def8c23c923'
-          '5f17e4f70a8ca6d1591a5b19dc4db88c0b03b298')
+          '161e47f37ba7ae27076d95e15fec43a2481b1360')
 
 _gitroot="git://github.com/psi-neamf/pacshare.git"
 _gitname="pacshare"
@@ -50,8 +48,7 @@ package() {
   cd $srcdir/$_gitname-build
   python setup.py install --root=${pkgdir} --install-scripts="/usr/lib"
 
-  install -Dp -m0755 ${startdir}/pacshare-init ${pkgdir}/etc/rc.d/pacshare
-  install -Dp -m0644 ${startdir}/pacshare-init.conf ${pkgdir}/etc/conf.d/pacshare.conf
+  install -Dp -m0755 ${startdir}/pacshare.service ${pkgdir}/etc/systemd/systemd/systemd/pacshare.service
   install -Dp -m0644 ${startdir}/pacshare-logrotate ${pkgdir}/etc/logrotate.d/pacshare
 }
 
