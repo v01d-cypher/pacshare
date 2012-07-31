@@ -16,7 +16,7 @@ install=pacshare.install
 source=("pacshare.service"
         "pacshare-logrotate"
         "pacshare.install")
-sha1sums=('fda781293a938b21323a9268be6bd8b122c6e90d'
+sha1sums=('1c81717c4e7dc77e80cec3703859323777dbf443'
           '15331ed5b81c8165be28311571503def8c23c923'
           '161e47f37ba7ae27076d95e15fec43a2481b1360')
 
@@ -48,7 +48,7 @@ package() {
   cd $srcdir/$_gitname-build
   python setup.py install --root=${pkgdir} --install-scripts="/usr/lib"
 
-  install -Dp -m0755 ${startdir}/pacshare.service ${pkgdir}/etc/systemd/systemd/systemd/pacshare.service
+  install -Dp -m0755 ${startdir}/pacshare.service ${pkgdir}/usr/lib/systemd/system/pacshare.service
   install -Dp -m0644 ${startdir}/pacshare-logrotate ${pkgdir}/etc/logrotate.d/pacshare
 }
 

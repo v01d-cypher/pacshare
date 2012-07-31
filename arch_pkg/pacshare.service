@@ -3,4 +3,7 @@ Description=Share packages over the local network
 After=avahi.service
 
 [Service]
-ExecStart=/bin/su root -l -c "/usr/lib/pacshare-server"
+ExecStart=/bin/su nobody -l -c "/usr/lib/pacshare-server"
+
+[Install]
+WantedBy=multi-user.target
