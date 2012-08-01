@@ -16,7 +16,7 @@ install=pacshare.install
 source=("pacshare.service"
         "pacshare-logrotate"
         "pacshare.install")
-sha1sums=('1c81717c4e7dc77e80cec3703859323777dbf443'
+sha1sums=('3b1540bf6143dbe441afc09e1d8c7a49a14437fe'
           '15331ed5b81c8165be28311571503def8c23c923'
           '161e47f37ba7ae27076d95e15fec43a2481b1360')
 
