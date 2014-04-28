@@ -15,39 +15,48 @@ from waitress.server import WSGIServer
 from pycman.config import PacmanConfig
 from pacshare import avahi
 
+
 class FileIterable(object):
+
     def __init__(self, filename):
         self.filename = filename
+
     def __iter__(self):
         return FileIterator(self.filename)
 
+
 class FileIterator(object):
     chunk_size = 4096
+
     def __init__(self, filename):
         self.filename = filename
         self.fileobj = open(self.filename, 'rb')
+
     def __iter__(self):
         return self
+
     def __next__(self):
         chunk = self.fileobj.read(self.chunk_size)
         if not chunk:
             raise StopIteration
         return chunk
 
+
 class WsgiApplication(object):
+
     def __init__(self, config):
         self.config = config
-    
+
     @wsgify
     def __call__(self, request):
         path = request.path.rstrip('/').split('/')[1:]
         if len(path) > 1:
             return webob.exc.HTTPNotFound()
-        
+
         cachedirs = self.config.options.get(
             'CacheDir',
-            ['/var/cache/pacman/pkg']) # Older versions of pycman.config did not have a default for CacheDir
-        
+            ['/var/cache/pacman/pkg'])  # Older versions of pycman.config did not have a default for CacheDir
+
         for cachedir in cachedirs:
             filepath = os.path.join(cachedir, path[0])
             if os.path.exists(filepath):
@@ -60,7 +69,7 @@ class WsgiApplication(object):
                 res.last_modified = os.path.getmtime(filepath)
                 res.conditional_response = True
                 return res
-        
+
         return webob.exc.HTTPNotFound()
 
 
@@ -73,26 +82,26 @@ def main():
     parser.add_argument('--pacman-config', help='Config file for pacman.',
                         default='/etc/pacman.conf')
     args = parser.parse_args()
-    
+
     # TODO config file for server, logging, and alpm options
     logging.basicConfig(level=logging.INFO)
     try:
         logger = logging.getLogger('waitress')
         logger.setLevel(logging.INFO)
-        
+
         # TODO - check for changes in this file, and reload
         config = PacmanConfig(conf=args.pacman_config)
         wsgi_app = WsgiApplication(config)
         avahi.entry_group_add_service('pacshare on {}'.format(socket.gethostname()),
                                       '_pacshare._tcp', port=args.port, host=args.host)
-        
+
         server = WSGIServer(wsgi_app, host=args.host, port=args.port)
-        
+
         logging.info('Starting server http://%s:%s', server.effective_host, server.effective_port)
 
         try:
             server.run()
-        except KeyboardInterrupt as e:
+        except KeyboardInterrupt:
             logging.info('Keyboard Interrupt')
         finally:
             logging.info('Server stoped.')

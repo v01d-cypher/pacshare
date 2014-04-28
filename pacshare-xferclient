@@ -3,12 +3,12 @@
 import argparse
 import datetime
 import logging
+import math
 import os
-import random
 import re
 import shutil
 import sys
-import math
+
 
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError, URLError
@@ -21,12 +21,13 @@ import dbus
 
 from pacshare import avahi
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('url', help='URL to download')
     parser.add_argument('filename', help='Filename to save as')
-    
+
     args = parser.parse_args()
     global log_handler
     log_handler = StreamHandlerProgressBarClear(sys.stdout)
@@ -41,12 +42,13 @@ def main():
             return 0
         else:
             return 2
-    except KeyboardInterrupt as e:
+    except KeyboardInterrupt:
         logging.error('Interrupt signal received')
         return 1
     except:
         logging.exception('')
         return 2
+
 
 def get_pacshare_peers():
     logging.debug('Getting pacshare peers from avahi.')
@@ -58,7 +60,7 @@ def get_pacshare_peers():
     else:
         logging.debug('No peers found.')
     for service in services:
-        try :
+        try:
             yield avahi.resolve_service(
                 service.name, service.type, service.domain)
         except dbus.exceptions.DBusException as e:
@@ -73,6 +75,8 @@ def http_date_to_datetime(s):
     return datetime.datetime.strptime(s, '%a, %d %b %Y %H:%M:%S %z')
 
 package_re = re.compile('(.*)\.pkg\.tar\.xz$')
+
+
 def fetch_url(url, filename):
     pbar = ProgressBar(maxval=0)
 
@@ -81,7 +85,7 @@ def fetch_url(url, filename):
     pbar.status_widget.server_from = ''
     pbar.start()
     log_handler.pbar = pbar
-    
+
     try:
         last_modified = None
         if filename.endswith('.part'):
@@ -91,15 +95,15 @@ def fetch_url(url, filename):
                     os.path.getmtime(old_file_path),
                     UTC)
             except OSError:
-                pass # Most likly the file does not exist.
-        
+                pass  # Most likly the file does not exist.
+
         def not_modified_use_old_file():
             logging.debug("{} not modified, using {}".format(url, old_file_path))
             shutil.copyfile(old_file_path, filename)
             pbar.status_widget.format = '{0.resource_name} {0.server_from} - Not modified.'
             pbar.finish()
             return True
-        
+
         def _fetch_url(url, error_level=logging.ERROR):
             try:
                 logging.debug('Downloading {} to {}'.format(url, filename))
@@ -108,23 +112,23 @@ def fetch_url(url, filename):
                 if last_modified:
                     request.headers['If-Modified-Since'] = serialize_date(last_modified)
                 response = urlopen(request)
-                
+
                 response_info = response.info()
                 response_last_modified = parse_date(response_info['last-modified'])
                 if response_last_modified and last_modified and last_modified >= response_last_modified:
                     response.close()
                     return not_modified_use_old_file()
-                
+
                 total_size = int(response_info['Content-Length'])
-                
+
                 if total_size:
                     pbar.maxval = total_size
                     pbar.update()
                 else:
                     # what pbar widget do we need here?
                     pass
-                
-                block_size = 1024        
+
+                block_size = 1024
                 with open(filename, 'wb') as file:
                     while True:
                         chunk = response.read(block_size)
@@ -143,11 +147,11 @@ def fetch_url(url, filename):
             except Exception:
                 logging.exception('Downloading {}'.format(url))
                 return False
-        
+
         up = urlparse(url)
         path = up.path.split('/')[1:]
         pbar.status_widget.resource_name = path[-1]
-        
+
         package_name_match = package_re.match(path[-1])
         if package_name_match:
             logging.debug('Package detected.')
@@ -162,7 +166,7 @@ def fetch_url(url, filename):
                     logging.DEBUG)
                 if fetch_success:
                     return True
-        
+
         pbar.status_widget.server_from = 'from {0.netloc}'.format(up)
         return _fetch_url(url)
     except:
@@ -171,8 +175,9 @@ def fetch_url(url, filename):
     finally:
         log_handler.pbar = None
 
+
 class StreamHandlerProgressBarClear(logging.StreamHandler):
-    
+
     def emit(self, record):
         try:
             pbar = getattr(self, 'pbar', None)
@@ -187,35 +192,36 @@ class StreamHandlerProgressBarClear(logging.StreamHandler):
         except:
             self.handleError(record)
 
+
 class ProgressBar(progressbar.ProgressBar):
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.status_widget = ProgressBarStatusWidget()
-        self.numbers_widgets = [progressbar.ETA(), '  ', progressbar.FileTransferSpeed(),' ']
+        self.numbers_widgets = [progressbar.ETA(), '  ', progressbar.FileTransferSpeed(), ' ']
         self.progress_bar = progressbar.Bar(left='[', right=']')
         self.percentage_widget = progressbar.Percentage()
-    
+
     def _need_update(self):
         # allways update
         return True
-    
+
     def _format_widgets(self):
         # reimplement so that we look the same as pacman.
-        
+
         status_result = ' ' + progressbar.format_updatable(self.status_widget, self) + ' '
-        
+
         if self.maxval > 0:
             width = self.term_width
             info_width = max(int(math.ceil(width * 6 / 10)),
                              51)
-            
+
             numbers_result = ''.join(progressbar.format_updatable(widget, self)
-                               for widget in self.numbers_widgets)
-            
+                                     for widget in self.numbers_widgets)
+
             status_width = len(status_result)
             info_remaining_width = info_width - (status_width + len(numbers_result))
-            if info_remaining_width>=0:
+            if info_remaining_width >= 0:
                 info_result = status_result + (' ' * info_remaining_width) + numbers_result
             else:
                 # not enough space for status and numbers, so just show status
@@ -227,7 +233,7 @@ class ProgressBar(progressbar.ProgressBar):
             if len(info_result) != info_width:
                 logging.warn("Len of info_result not correct. Should be %d, and it's %d"
                              % (info_width, len(info_result)))
-            
+
             if width - info_width > 3:
                 percentage_result = progressbar.format_updatable(self.percentage_widget, self)
                 progressbar_width = width - info_width - len(percentage_result)
@@ -235,7 +241,7 @@ class ProgressBar(progressbar.ProgressBar):
                     progressbar_result = self.progress_bar.update(self, progressbar_width - 1) + ' '
                 else:
                     progressbar_result = ''
-                
+
                 return info_result, progressbar_result, percentage_result
             else:
                 return info_result,
@@ -244,6 +250,7 @@ class ProgressBar(progressbar.ProgressBar):
 
 
 class ProgressBarStatusWidget(progressbar.Widget):
+
     def update(self, pbar):
         return self.format.format(self, pbar)
 
