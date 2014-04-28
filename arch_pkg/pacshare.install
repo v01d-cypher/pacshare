@@ -1,6 +1,4 @@
 post_install() {
-  mkdir -p /var/log/pacshare
-  touch /var/log/pacshare/server.log
   echo "To use pacshare, set XferCommand = /usr/lib/pacshare-xferclient %u %o in /etc/pacman.conf"
   echo "To share your packages with users on the LAN, enable the pacshare.service"
   echo "# systemctl enable pacshare.service"

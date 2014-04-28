@@ -1,9 +1,0 @@
-/var/log/pacshare/*.log {
-   notifempty
-   missingok
-   compress
-   sharedscripts
-   postrotate
-       touch /var/log/pacshare/server.log
-   endscript
-}
