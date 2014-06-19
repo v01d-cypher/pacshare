@@ -1,11 +1,8 @@
-# Maintainer : Nevar <psi.neamf@gmail.com>
-# Contributor: Gary van der Merwe <garyvdm@gmail.com>
-
 pkgname=pacshare
-pkgver=r57.740713f
+pkgver=r59.78a1907
 pkgrel=1
 pkgdesc="Share pacman packages on the LAN."
-arch=('i686' 'x86_64')
+arch=('any')
 url="https://github.com/psi-neamf/pacshare"
 license=('GPL')
 makedepends=('python-distribute')
