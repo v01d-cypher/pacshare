@@ -1,30 +1,11 @@
-from setuptools import setup, find_packages
-import sys, os
+from cx_Freeze import setup, Executable
 
-version = '0.0'
-
-setup(name='pacshare',
-      version=version,
-      description="Share pacman repositories on LAN",
-      long_description="""\
-      Allows sharing of software packages between multiple clients on a LAN with minimal configuration.
-""",
-      classifiers=[], # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
-      keywords='',
-      author='Nevar',
-      author_email='psi.neamf@gmail.com',
-      url='',
-      license='GPL',
-      packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
-      include_package_data=True,
-      zip_safe=True,
-      install_requires=[
-          'progressbar',
-          'pyalpm',
-          'WebOb>=1.2b2',
-      ],
-      scripts=[
-        'pacshare-xferclient',
-        'pacshare-server',
-      ],
-      )
+setup(
+    name='pacshare',
+    version='0',
+    description="Share pacman repositories on LAN",
+    executables=[
+        Executable("pacshare-xferclient"),
+        Executable("pacshare-server"),
+    ],
+)

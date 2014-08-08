@@ -1,14 +1,13 @@
 pkgname=pacshare
-pkgver=r59.78a1907
+pkgver=r61
 pkgrel=1
 pkgdesc="Share pacman packages on the LAN."
 arch=('any')
 url="https://github.com/psi-neamf/pacshare"
 license=('GPL')
-makedepends=('python-distribute')
-depends=('avahi' 'python' 'python-progressbar' 'python-webob'
-         'pyalpm' 'python-dbus' 'dbus-glib' 
-         'python-gobject2' 'python-waitress')
+makedepends=('python' 'python-cx_freeze' 'python-progressbar' 'python-webob'
+             'pyalpm' 'python-dbus' 'python-gobject2' 'python-waitress')
+depends=('avahi' 'dbus-glib')
 install=pacshare.install
 source=('git+https://github.com/v01d-cypher/pacshare.git'
         'pacshare.service'
@@ -29,9 +28,12 @@ build() {
 
 package() {
   cd $srcdir/$pkgname
-  python setup.py install --root=${pkgdir} --install-scripts="/usr/lib"
+  python setup.py install --root=${pkgdir} --install-exe="/usr/lib/pacshare"
+  rm -r ${pkgdir}/usr/bin
+  ln -s pacshare/pacshare-server ${pkgdir}/usr/lib/pacshare-server
+  ln -s pacshare/pacshare-xferclient ${pkgdir}/usr/lib/pacshare-xferclient
 
-  install -Dp -m0755 ${startdir}/pacshare.service ${pkgdir}/usr/lib/systemd/system/pacshare.service
+  install -Dp -m0644 ${startdir}/pacshare.service ${pkgdir}/usr/lib/systemd/system/pacshare.service
 }
 
 # vim:set ts=2 sw=2 et:
